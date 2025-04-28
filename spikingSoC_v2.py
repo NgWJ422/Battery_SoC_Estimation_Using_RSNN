@@ -12,6 +12,7 @@ import seaborn as sns
 import os
 import csv
 import time as mtime
+import sys
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -259,10 +260,8 @@ def trainNetwork(network,train_dataset,device):
         #spikedata = spikedata.to(dtype=eval(f"torch.{datatype}"))
         training_pairs.append([spikes["O"].get("s").sum(0).float(), target])
         #training_pairs.append([spikedata, target])
-
         # use debug to view training pairs
         #training_pairs_debug = training_pairs[i][0].numpy()
-
         network.reset_state_variables()
 
     #use debug to view training pairs
@@ -365,6 +364,7 @@ def testNetwork(network,model,test_dataset,device):
         cycle = dataPoint[0]
         datum = dataPoint[1].float()
         target = dataPoint[2].float()
+        SoCtime = dataPoint[3].float()
 
         #encoded_datum = poisson(datum, time=time, dt=dt)
         encoded_datum = poisson_normalized(datum, maxrate=max_rate, avgISI=avg_ISI, time=time, dt=dt)
@@ -373,7 +373,7 @@ def testNetwork(network,model,test_dataset,device):
 
         # Run network on sample image
         network.run(inputs={"I": encoded_datum}, time=time, input_time_dim=1)
-        testing_pairs.append([cycle, spikes["O"].get("s").sum(0).float(), target])
+        testing_pairs.append([cycle, SoCtime, spikes["O"].get("s").sum(0).float(), target])
 
         # use debug to view testing pairs
         #testing_pairs_debug = testing_pairs[i][0].numpy()
@@ -382,53 +382,47 @@ def testNetwork(network,model,test_dataset,device):
 
     # Test model with previously trained logistic regression classifier
     results = []
-    for c, s, calc_soh in testing_pairs:
-        pred_soh = model(s)
-        results.append([c.item(), calc_soh.item(), pred_soh.item()])
+    for c, t, s, calc_soc in testing_pairs:
+        pred_soc = model(s)
+        results.append([c.item(), t.item(), calc_soc.item(), pred_soc.item()])
 
     end_time = mtime.time()
     print("Testing Time:%d", end_time - start_time)
     analysis_result.append(end_time-start_time)
 
-    return pd.DataFrame(data=results,columns=['cycle', 'SoH', 'PredSoH'])
+    return pd.DataFrame(data=results,columns=['cycle', 'time', 'SoC', 'PredSoC'])
 
 
-def performanceAnalysis(data):
-    data = data.sort_values(by='cycle')
-    data = data.groupby(['cycle']).mean().reset_index()
-    print(data.sample(10))
-    rms = np.sqrt(mean_squared_error(data['SoH'], data['PredSoH']))
-    print('Root Mean Square Error: ', rms)
-    analysis_result.append(rms)
+def performanceAnalysis_SoC(data):
+    data = data.sort_values(by=['cycle', 'time'], ascending=[True, True])
+    print(data.head())
+    data.to_csv('SoC_results_testing.csv', index=False)
+    
+    rmse_global = np.sqrt(mean_squared_error(data['SoC'], data['PredSoC']))
+    print(f"Global RMSE: {rmse_global:.5f}")
 
-    # plot final result
-    if plot is True:
-        plot_df = data.loc[(data['cycle'] >= 1), ['cycle', 'SoH', 'PredSoH']]
-        sns.set_style("white")
-        plt.figure(figsize=(8, 5))
-        plt.plot(plot_df['cycle'], plot_df['SoH'], label='Calculated SoH')
-        plt.plot(plot_df['cycle'], plot_df['PredSoH'], label='Predicted SoH')
-        # Draw threshold
-        # plt.plot([0.,len(capacity)], [0.70, 0.70], label='Threshold')
-        plt.ylabel('SOH')
-        # make x-axis ticks legible
-        adf = plt.gca().get_xaxis().get_major_formatter()
-        plt.xlabel('cycle')
-        plt.legend()
-        plt.title('Comparison Calculated vs Predicted SoH')
-        plt.show(block=True)
-
-    if record is True:
-        #record simulation log
-        with open('simulation_analysis.csv', mode='a', newline='') as file:
-            writer = csv.writer(file)
-            writer.writerow(analysis_result)
-
-        #record SoH result
-        data.to_csv('SoH_results.csv', index=False)
 
 
     return
+
+
+def CalculateSoC(pSoc, capacity, current, ptime, ctime):
+    # Convert capacity Ah to As
+    capacity = capacity * 3600  
+
+    # Calculate the time difference
+    delta_time = ctime - ptime
+    
+    # Calculate the integral assuming constant current
+    integral_current = current * delta_time
+    
+    # Calculate the SoC
+    SoC = pSoc + (1 / capacity) * integral_current
+    # Ensure SoC is between 0 and 100
+    SoC = max(0, min(SoC, 1))  
+    
+    return SoC
+
 
 def main():
     device = setDevice(gpu)       #set run on CPU/GPU
@@ -436,70 +430,97 @@ def main():
 
     #=================== Training Network ========================
     train_data, capacity_data = loadDataset(data_path, trainBattery)    #load training data
-    #calculate SoH based on dataset for each cycle -
-    # NOTE: Later try to optimize by insert it on loadDataset function
-    #       only use for plot SoH graph
-    attrib = ['cycle', 'capacity']
-    SoH_data = capacity_data[attrib]
-    initcap = capacity_data['capacity'][0]
-    for i in range(len(SoH_data)):
-        SoH_data['SoH'] = (SoH_data['capacity']) / initcap  # current_capacity/initial_capacity
-
-    # plot graph battery SoH vs cycle
-    if plot is True:
-        plot_df = SoH_data.loc[(SoH_data['cycle'] >= 1), ['cycle', 'SoH']]
-        sns.set_style("white")
-        plt.figure(figsize=(8, 5))
-        plt.plot(plot_df['cycle'], plot_df['SoH'])
-        # Draw threshold at 70% of battery SoH
-        plt.plot([0., len(capacity_data)], [0.70, 0.70])
-        plt.ylabel('SoH')
-        # make x-axis ticks legible
-        adf = plt.gca().get_xaxis().get_major_formatter()
-        plt.xlabel('cycle')
-        plt.title('Battery Discharge(' + trainBattery + ')')
-        plt.show(block=True)
 
     # create training dataset
-    initcap = train_data['capacity'][0]
-    soh = []
-    for i in range(len(train_data)):  # add SoH for each cycle on training dataset output
-        soh.append([train_data['capacity'][i] / initcap])
-    soh = pd.DataFrame(data=soh, columns=['SoH'])
+    # Selecting the relevant columns and making a copy to avoid modifying the original data
+    attrib = ['cycle', 'time', 'capacity', 'current_measured']
+    SoC_data = train_data[attrib].copy()
 
+    # Create a new column 'SoC' and initialize it with zeros
+    SoC_data['SoC'] = 0.0
+
+    # Set the initial conditions for the first row
+    SoC_data.loc[0, 'SoC'] = 1   # pSoC for the first row is 100
+    SoC = [1.0]
+
+    for i in range(1, len(SoC_data)):
+        if SoC_data['cycle'][i] != SoC_data['cycle'][i - 1]:
+            SoC_data.loc[i, 'SoC'] = 1.0  # reset SoC to 100% for new cycle
+            SoC.append(1.0)  # reset SoC list to 100%
+            continue  # skip to the next iteration
+
+        ptime = SoC_data.loc[i - 1, 'time']  # previous time
+        ctime = SoC_data.loc[i, 'time']      # current time
+        pSoc = SoC_data.loc[i - 1, 'SoC']   # previous SoC
+        current = SoC_data.loc[i, 'current_measured']  # current value
+        capacity = SoC_data.loc[i, 'capacity'] # capacity value
+        cSoC = CalculateSoC(pSoc, capacity, current, ptime, ctime) # calculate SoC using previous SoC, current and time
+        SoC_data.loc[i, 'SoC'] = cSoC  # update SoC value in the dataframe
+        SoC.append(cSoC) 
+
+    SoC = pd.DataFrame(data=SoC, columns=['SoC'])
+    print("SoC data: ", SoC_data.head(10))
     # NOTE: add different battery properties as training dataset input
     #       Later can reduce number of inputs or use statistical process as input
     attribs = ['capacity', 'voltage_measured', 'current_measured',
-               'temperature_measured', 'current_load', 'voltage_load', 'time']
-    train_dataset = train_data[attribs]
-    #train_dataset_debug = train_dataset
+           'temperature_measured', 'current_load', 'voltage_load', 'time']
+
+    # Feature matrix and target vector
+    X = train_data[attribs]
+    y = SoC['SoC']
+
+    # Ensure matching indices
+    X = X.loc[y.index]
+    y = y.loc[X.index]
+
+    # Normalize features
     sc = MinMaxScaler(feature_range=(0, 1))
-    train_dataset = sc.fit_transform(train_dataset)  # narmalize input value at range [0,1]
-    #train_dataset_normalize_debug = train_dataset
-    print(soh.head(10))
-    #x = (soh['SoH'].values).reshape(-1,1)
-    #combine inputs/features and target as single Tensor Dataset
-    train_dataset = torch.utils.data.TensorDataset(torch.tensor(train_dataset),torch.tensor( (soh['SoH'].values).reshape(-1,1) ) )
+    X_scaled = sc.fit_transform(X)
+
+    # Convert to tensors
+    X_tensor = torch.tensor(X_scaled, dtype=torch.float32)
+    y_tensor = torch.tensor(y.values.reshape(-1, 1), dtype=torch.float32)
+
+    # Build dataset
+    train_dataset = torch.utils.data.TensorDataset(X_tensor, y_tensor)
+    print("Sample targets:", y_tensor[:10].squeeze())
+    print("Sample features:", X_tensor[:10].squeeze())
     trained_model = trainNetwork(network, train_dataset, device)        # training the network
+
 
     # =================== Testing Network ========================
     test_data, capacity_data = loadDataset(data_path, testBattery)  # load testing data
+    print(test_data.head(10))
     # calculate SoH based on dataset for each cycle -
     # NOTE: Later try to optimize by insert it on loadDataset function
     #       only use for plot SoH graph
-    attrib = ['cycle', 'capacity']
-    SoH_data = capacity_data[attrib]
-    initcap = capacity_data['capacity'][0]
-    for i in range(len(SoH_data)):
-        SoH_data['SoH'] = (SoH_data['capacity']) / initcap  # current_capacity/initial_capacity
+    attrib = ['cycle', 'time', 'capacity', 'current_measured']
+    SoC_data_test = test_data[attrib].copy()
 
-    # create testing dataset
-    initcap = test_data['capacity'][0]
-    soh = []
-    for i in range(len(test_data)):  # add SoH for each cycle on test dataset output
-        soh.append([test_data['capacity'][i] / initcap])
-    soh = pd.DataFrame(data=soh, columns=['SoH'])  #need as testing label
+    # Create a new column 'SoC' and initialize it with zeros
+    SoC_data_test['SoC'] = 0.0
+    
+    # Set the initial conditions for the first row
+    SoC_data_test.loc[0, 'SoC'] = 1   # pSoC for the first row is 100
+    SoC = [1.0]
 
+    for i in range(1, len(SoC_data_test)):
+        if SoC_data_test['cycle'][i] != SoC_data_test['cycle'][i - 1]:
+            SoC_data_test.loc[i, 'SoC'] = 1.0  # reset SoC to 100% for new cycle
+            SoC.append(1.0)  # reset SoC list to 100%
+            continue  # skip to the next iteration
+
+        ptime = SoC_data_test.loc[i - 1, 'time']  # previous time
+        ctime = SoC_data_test.loc[i, 'time']      # current time
+        pSoc = SoC_data_test.loc[i - 1, 'SoC']   # previous SoC
+        current = SoC_data_test.loc[i, 'current_measured']  # current value
+        capacity = SoC_data_test.loc[i, 'capacity'] # capacity value
+        cSoC = CalculateSoC(pSoc, capacity, current, ptime, ctime) # calculate SoC using previous SoC, current and time
+        SoC_data_test.loc[i, 'SoC'] = cSoC  # update SoC value in the dataframe
+        SoC.append(cSoC) 
+
+    SoC = pd.DataFrame(data=SoC, columns=['SoC'])
+    print("SoC data: ", SoC_data_test.head(10))
     # NOTE: The properties should similar with training data
     attribs = ['capacity', 'voltage_measured', 'current_measured',
                'temperature_measured', 'current_load', 'voltage_load', 'time']
@@ -508,15 +529,18 @@ def main():
     # combine inputs/features and target as single Tensor Dataset
     test_dataset = torch.utils.data.TensorDataset(torch.tensor(test_data['cycle']),
                                                   torch.tensor(test_dataset),
-                                                   torch.tensor((soh['SoH'].values).reshape(-1, 1)))
+                                                   torch.tensor((SoC['SoC'].values).reshape(-1, 1)),
+                                                   torch.tensor(test_data['time']))
 
     results = testNetwork(network, trained_model, test_dataset, device)  # testing the network
 
     #=============Analyze the Model Performance============
-    performanceAnalysis(results)
+    performanceAnalysis_SoC(results)
 
     return
+
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
     main()
+    
