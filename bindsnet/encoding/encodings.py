@@ -157,7 +157,7 @@ def poisson_normalized(
                 spikes[spike_times, i] = 1
 
         spikes_debug = spikes.numpy()
-
+        
         return spikes.view(time, *shape)
 
 

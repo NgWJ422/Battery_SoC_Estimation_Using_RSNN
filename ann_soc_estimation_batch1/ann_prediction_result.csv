@@ -1,0 +1,9 @@
+Metric,Value
+Final Training Loss,0.07186520099639893
+Wall Clock Time (s),4110.672840118408
+CPU Time (s),4632.640625
+Memory Usage Δ (MB),-273.85546875
+Peak RAM Usage (MB),7.570741653442383
+Final Memory Usage (MB),81.38671875
+Prediction Time (s),6.1062116622924805
+Global RMSE,0.08600585718397451
