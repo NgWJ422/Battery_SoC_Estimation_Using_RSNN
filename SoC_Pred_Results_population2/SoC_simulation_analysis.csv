@@ -1,0 +1,2 @@
+n_neurons,n_hidden,n_epochs,time,avg_ISI,max_rate,datatype,inpConn_density,resConn_density,inpConn_type_0,inpConn_type_1,inpConn_type_2,resConn_type_0,resConn_type_1,resConn_type_2,train_sample,Last epoch train loss,train_time,cpu_time,peak_ram_MB,final_ram_MB,total_energy_j,test_sample,test_time,rmse
+500,50,20,100,1,50,float,0.5,0.3,rand,exe,0.3,rand,inb,0.5,50285,0.0010535257413212332,12024.095515489578,53241.74999999999,54.1332950592041,192.59375,1.0057074412,50285,4530.159168720245,0.04433025189377848

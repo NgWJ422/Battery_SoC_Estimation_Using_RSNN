@@ -91,6 +91,9 @@ analysis_result = [n_neurons, n_hidden, n_epochs, time, avg_ISI, max_rate, datat
 # For population encoding, we need to define the number of neurons per input feature
 neurons_per_input = 15  # Number of neurons per input feature
 
+# Loihi 2 synaptic operation energy (in Joules)
+E_SPIKE_J = 11e-12  # 11 pJ per synaptic operation
+
 def CalculateSoC(pSoc, capacity, current, ptime, ctime):
     # Convert capacity Ah to As
     capacity = capacity * 3600
@@ -281,6 +284,9 @@ def trainNetwork(network,train_dataset,device):
 
     tracemalloc.start()  # Optional: Python-level memory usage
 
+    # Counters for spike-based energy estimation
+    total_input_spikes = 0
+    total_reservoir_spikes = 0
 
     n_iters = examples
     training_pairs = []             #list of spikes from reservoir network
@@ -305,6 +311,8 @@ def trainNetwork(network,train_dataset,device):
             device=device
         )
         encoded_datum = encoded_datum.reshape(time, -1)  # shape = [time, input_neurons]
+        num_input_spikes = encoded_datum.sum().item()
+        total_input_spikes += num_input_spikes
 
 
         if train_all:
@@ -316,6 +324,8 @@ def trainNetwork(network,train_dataset,device):
         network.run(inputs={"I": encoded_datum}, time=time, input_time_dim=0)
         #spikedata = spikes["O"].get("s").sum(0)
         #spikedata = spikedata.to(dtype=eval(f"torch.{datatype}"))
+        reservoir_spike_count = spikes["O"].get("s").sum().item()
+        total_reservoir_spikes += reservoir_spike_count
         
         training_pairs.append([spikes["O"].get("s").sum(0).float(), target])
         #training_pairs.append([spikedata, target])
@@ -405,8 +415,27 @@ def trainNetwork(network,train_dataset,device):
     analysis_result.append(peakRam / (1024 ** 2))  # convert to MB
     analysis_result.append(mem_end / (1024 ** 2))  # convert to MB
     
+    # Define number of neurons per input feature (must be set by you or derived)
+    n_input = n_features * neurons_per_input
+
+    # Estimate synaptic fan-outs
+    input_fanout = int(n_neurons * inpConn_density)
+    reservoir_fanout = int(n_neurons * resConn_density)
 
 
+    total_input_energy = total_input_spikes * input_fanout * E_SPIKE_J
+    total_reservoir_energy = total_reservoir_spikes * reservoir_fanout * E_SPIKE_J
+    total_estimated_energy = total_input_energy + total_reservoir_energy
+
+    print("\n🔋 Estimated Neuromorphic Energy Consumption (Loihi 2)")
+    print(f"Total Input Neurons    : {n_input}")
+    print(f"Total Input Spikes     : {total_input_spikes}")
+    print(f"Total Reservoir Spikes : {total_reservoir_spikes}")
+    print(f"Input Layer Energy     : {total_input_energy * 1e6:.3f} µJ")
+    print(f"Reservoir Energy       : {total_reservoir_energy * 1e6:.3f} µJ")
+    print(f"Total Energy Estimate  : {total_estimated_energy * 1e6:.3f} µJ")
+
+    analysis_result.append(total_estimated_energy)  # in Joules
 
     return model
 
@@ -534,7 +563,7 @@ def performanceAnalysis(data):
                     'inpConn_density', 'resConn_density',
                     'inpConn_type_0', 'inpConn_type_1', 'inpConn_type_2',
                     'resConn_type_0', 'resConn_type_1', 'resConn_type_2',
-                    'train_sample', 'Last epoch train loss', 'train_time', 'cpu_time', 'peak_ram_MB', 'final_ram_MB',
+                    'train_sample', 'Last epoch train loss', 'train_time', 'cpu_time', 'peak_ram_MB', 'final_ram_MB','total_energy_j',
                     'test_sample', 'test_time', 'rmse'
                 ]
                 writer.writerow(header)

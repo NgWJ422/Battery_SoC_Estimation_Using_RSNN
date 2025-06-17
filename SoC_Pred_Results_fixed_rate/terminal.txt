@@ -1,0 +1,86 @@
+PS D:\Projects-Ng\Battery_SoC_Estimation_Using_RSNN> & d:/Projects-Ng/Battery_SoC_Estimation_Using_RSNN/myvenv/Scripts/python.exe d:/Projects-Ng/Battery_SoC_Estimation_Using_RSNN/spikingSoC_v3_fixed_rate.py
+False
+Running on Device =  cpu
+d:\Projects-Ng\Battery_SoC_Estimation_Using_RSNN\spikingSoC_v3_fixed_rate.py:147: UserWarning: To copy construct from a tensor, it is recommended to use sourceTensor.clone().detach() or sourceTensor.clone().detach().requires_grad_(True), rather than torch.tensor(sourceTensor).
+  torch.tensor(connWeight * ratio), torch.tensor(0))
+d:\Projects-Ng\Battery_SoC_Estimation_Using_RSNN\spikingSoC_v3_fixed_rate.py:152: UserWarning: To copy construct from a tensor, it is recommended to use sourceTensor.clone().detach() or sourceTensor.clone().detach().requires_grad_(True), rather than torch.tensor(sourceTensor).
+  torch.where(inhbConn_flag,torch.tensor(-connWeight*ratio),torch.tensor(connWeight*ratio)),
+Total memory usage by the model: 0.05 MB
+in kB: {50199}
+
+Memory usage difference after creating the model:
+D:\Projects-Ng\Battery_SoC_Estimation_Using_RSNN\myvenv\lib\site-packages\torch\nn\modules\module.py:2032: size=5792 B (+5792 B), count=8 (+8), average=724 B
+D:\Projects-Ng\Battery_SoC_Estimation_Using_RSNN\myvenv\lib\site-packages\torch\nn\modules\module.py:511: size=1480 B (+1480 B), count=10 (+10), average=148 B
+D:\Projects-Ng\Battery_SoC_Estimation_Using_RSNN\myvenv\lib\site-packages\torch\nn\modules\module.py:510: size=1480 B (+1480 B), count=10 (+10), average=148 B
+D:\Projects-Ng\Battery_SoC_Estimation_Using_RSNN\myvenv\lib\site-packages\torch\nn\modules\module.py:509: size=1480 B (+1480 B), count=10 (+10), average=148 B
+D:\Projects-Ng\Battery_SoC_Estimation_Using_RSNN\myvenv\lib\site-packages\torch\nn\modules\module.py:508: size=1480 B (+1480 B), count=10 (+10), average=148 B
+D:\Projects-Ng\Battery_SoC_Estimation_Using_RSNN\myvenv\lib\site-packages\torch\nn\modules\module.py:507: size=1480 B (+1480 B), count=10 (+10), average=148 B
+C:\Users\User\AppData\Local\Programs\Python\Python39\lib\inspect.py:2266: size=1456 B (+1456 B), count=6 (+6), average=243 B
+D:\Projects-Ng\Battery_SoC_Estimation_Using_RSNN\myvenv\lib\site-packages\torch\nn\modules\module.py:506: size=1312 B (+1312 B), count=9 (+9), average=146 B
+d:\Projects-Ng\Battery_SoC_Estimation_Using_RSNN\bindsnet\learning\learning.py:130: size=1272 B (+1272 B), count=7 (+7), average=182 B
+d:\Projects-Ng\Battery_SoC_Estimation_Using_RSNN\spikingSoC_v3_fixed_rate.py:152: size=1159 B (+1159 B), count=3 (+3), average=386 B
+Total data in dataset:  616
+[1, np.uint8(24), datetime.datetime(2008, 4, 2, 15, 25, 41), np.float64(1.8564874208181574), np.float64(4.191491807505295), np.float64(-0.004901589207462691), np.float64(24.330033885570543), np.float64(-0.0006), np.float64(0.0), np.float64(0.0)]
+   cycle     time  capacity  current_measured
+0      1    0.000  1.856487         -0.004902
+1      1   16.781  1.856487         -0.001478
+2      1   35.703  1.856487         -2.012528
+3      1   53.781  1.856487         -2.013979
+4      1   71.922  1.856487         -2.011144
+5      1   90.094  1.856487         -2.013007
+6      1  108.281  1.856487         -2.014400
+7      1  126.453  1.856487         -2.011603
+8      1  144.641  1.856487         -2.018015
+9      1  162.844  1.856487         -2.013135
+        SoC
+0  1.000000
+1  0.999996
+2  0.994298
+3  0.988851
+4  0.983392
+5  0.977918
+6  0.972437
+7  0.966967
+8  0.961475
+9  0.955992
+(50285, 1)
+PyTorch is using 7 threads.
+Train progress: (50284 / 50285): 50285it [2:07:17,  6.58it/s]
+Feature variance: tensor(2.8872)
+Input data completed..
+
+ Training the read out
+Epoch: 20/20, Loss: 0.0031: 20it [11:01, 33.06s/it]
+
+Training Completed ✅
+Wall-clock Time     : 8319.00 seconds
+CPU Time (User+Sys) : 45361.66 seconds
+Memory Usage Change : 7.21 MB
+Memory at End       : 192.53 MB
+Memory at End       : 192.53 MB
+Peak Memory (Python): 54.13 MB
+
+🔋 Estimated Neuromorphic Energy Consumption (Loihi 2)
+Total Input Spikes     : 7339990
+Total Reservoir Spikes : 200193357
+Input Layer Energy     : 40369.945 µJ
+Reservoir Energy       : 550531.732 µJ
+Total Energy Estimate  : 590901.677 µJ
+Total data in dataset:  616
+[1, np.uint8(24), datetime.datetime(2008, 4, 2, 15, 25, 41), np.float64(2.035337591005598), np.float64(4.179799607333447), np.float64(-0.0023663271409738672), np.float64(24.277567510331888), np.float64(-0.0006), np.float64(0.0), np.float64(0.0)]
+Test progress: (50284 / 50285): 50285it [1:09:42, 12.02it/s]
+Testing Time:%d 4191.751907110214
+       cycle         time       SoC   PredSoC
+8226      38   375.312988  0.885304  0.868190
+35470    120   881.437988  0.648127  0.622898
+12917     51  2858.235107  0.088358  0.140372
+37555    126  2851.577881  0.000000  0.068865
+48906    164  1031.062012  0.505496  0.546996
+48379    162  1677.343994  0.210453  0.311520
+27846     96   937.906006  0.645469  0.714137
+11416     47  2042.671997  0.333090  0.519506
+38022    128  1424.250000  0.406553  0.493491
+38706    130  2052.952881  0.136441  0.190176
+Root Mean Square Error:  0.07174892169391951
+Simulation analysis metrics saved to 'SoC_Pred_Results_fixed_rate\SoC_simulation_analysis.csv'.
+SoC prediction results saved to 'SoC_Pred_Results_fixed_rate\SoC_Prediction_results.csv'.

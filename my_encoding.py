@@ -191,7 +191,7 @@ def phase_encoding(
     return spikes.view(time_steps, *shape)
 
 
-
+#check later if poisson or not
 def population_encoding(
     datum: torch.Tensor,
     num_neurons: int,
