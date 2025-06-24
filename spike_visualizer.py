@@ -39,12 +39,12 @@ def visualize_spike_train(spike_train: torch.Tensor, title: str = "Spike Train",
 
 # Example input
 datum = torch.tensor([0.2])  # A single input value between 0 and 1
-#spike_train = poisson_normalized(datum=datum, maxrate=50,avgISI=1, time=100, dt=1.0, device="cpu")
+spike_train = poisson_normalized(datum=datum, maxrate=50,avgISI=1, time=100, dt=1.0, device="cpu")
 
 
 spike_train = encoding.population_encoding(datum=datum,num_neurons= 15,time=100, dt=1.0)
 
-#spike_train = encoding.fix_normalized(datum= datum, maxrate=50, time=100, dt=1.0, device="cpu")
+spike_train = encoding.fix_normalized(datum= datum, maxrate=50, time=100, dt=1.0, device="cpu")
 
 #spike_train = encoding.ttfs2_encoding(datum,time=100, dt=1.0, device="cpu")
 

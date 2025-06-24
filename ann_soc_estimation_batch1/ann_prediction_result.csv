@@ -1,11 +1,11 @@
 Metric,Value
-Final Training Loss,0.06680529564619064
-Wall Clock Time (s),3331.2943415641785
-CPU Time (s),3619.796875
-Memory Usage Δ (MB),-248.22265625
-Peak RAM Usage (MB),5.2879133224487305
-Final Memory Usage (MB),66.9921875
+Final Training Loss,0.01297853421419859
+Wall Clock Time (s),4036.88086438179
+CPU Time (s),4313.0
+Memory Usage Δ (MB),-8.9921875
+Peak RAM Usage (MB),5.482625961303711
+Final Memory Usage (MB),78.015625
 Estimated Training FLOPs with Optimizer,3340935400.0
 Estimated Energy (Joules),0.42832505128205134
-Prediction Time (s),7.583887338638306
-Global RMSE,0.0414415377121047
+Prediction Time (s),3.6876754760742188
+Global RMSE,0.05995992015675476
